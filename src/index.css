@@ -1,0 +1,277 @@
+@import "tailwindcss";
+
+/* CSS Variables - Dark Theme (Default) */
+:root {
+  /* Typography */
+  --font-family: "Inter", "Roboto", sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --line-height: 1.5;
+  --text-size: 1rem;
+
+  /* Colors - Dark Theme */
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.5);
+  
+  --background-primary: #0a0a0a;
+  --background-secondary: #141414;
+  --background-tertiary: #1a1a1a;
+  
+  --red-primary: #ff4d4d;
+  --red-secondary: #ff6666;
+  --red-muted: rgba(255, 77, 77, 0.1);
+  
+  --border-color: rgba(255, 77, 77, 0.2);
+  --border-hover: rgba(255, 77, 77, 0.4);
+  
+  --shadow-color: rgba(255, 77, 77, 0.15);
+  --shadow-hover: rgba(255, 77, 77, 0.25);
+
+  /* Interactive Elements */
+  --button-bg: #1a1a1a;
+  --button-hover: #2a2a2a;
+  --button-active: #ff4d4d;
+  --button-text: #ffffff;
+  
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-slow: 350ms ease;
+}
+
+/* Light Theme Variables */
+[data-theme="light"] {
+  --text-primary: #1a1a1a;
+  --text-secondary: #333333;
+  --text-muted: #666666;
+  
+  --background-primary: #ffffff;
+  --background-secondary: #f5f5f5;
+  --background-tertiary: #fafafa;
+  
+  --red-primary: #d90000;
+  --red-secondary: #ff1a1a;
+  --red-muted: rgba(217, 0, 0, 0.1);
+  
+  --border-color: rgba(217, 0, 0, 0.2);
+  --border-hover: rgba(217, 0, 0, 0.4);
+  
+  --shadow-color: rgba(217, 0, 0, 0.1);
+  --shadow-hover: rgba(217, 0, 0, 0.2);
+  
+  --button-bg: #ffffff;
+  --button-hover: #f5f5f5;
+  --button-active: #d90000;
+  --button-text: #1a1a1a;
+}
+
+/* Base Styles */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height);
+  font-size: var(--text-size);
+  color: var(--text-primary);
+  background-color: var(--background-primary);
+  transition: background-color var(--transition-normal), color var(--transition-normal);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.2;
+  margin-bottom: 0.5em;
+}
+
+h1 { 
+  font-size: 2.5rem; 
+  background: linear-gradient(135deg, var(--red-primary), var(--red-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
+
+/* Links */
+a {
+  color: var(--red-primary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+a:hover {
+  color: var(--red-secondary);
+}
+
+a:after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  bottom: -2px;
+  left: 0;
+  background-color: var(--red-primary);
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform var(--transition-normal);
+}
+
+a:hover:after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+/* Buttons */
+button {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-family);
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+button:hover {
+  border-color: var(--border-hover);
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px var(--shadow-hover);
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--red-muted);
+}
+
+/* Primary Button */
+button.primary {
+  background: linear-gradient(135deg, var(--red-primary), var(--red-secondary));
+  color: white;
+  border: none;
+}
+
+button.primary:hover {
+  opacity: 0.9;
+}
+
+/* Card Styles */
+.card {
+  background-color: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 8px 24px var(--shadow-color);
+  transform: translateY(-2px);
+}
+
+/* Input Styles */
+input, textarea, select {
+  background-color: var(--background-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6em 1em;
+  color: var(--text-primary);
+  transition: all var(--transition-normal);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--red-primary);
+  box-shadow: 0 0 0 3px var(--red-muted);
+}
+
+/* Responsive Container */
+.container {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 1rem;
+  margin: 0 auto;
+}
+
+/* Container Breakpoints */
+@media (min-width: 640px) { .container { max-width: 640px; } }
+@media (min-width: 768px) { .container { max-width: 768px; } }
+@media (min-width: 1024px) { .container { max-width: 1024px; } }
+@media (min-width: 1280px) { .container { max-width: 1280px; } }
+@media (min-width: 1536px) { .container { max-width: 1536px; } }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal);
+}
+
+.animate-slide-in {
+  animation: slideIn var(--transition-normal);
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--transition-normal);
+}
+
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 15s linear infinite;
+}
+
+.bg-300\% {
+  background-size: 300% 100%;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+.shadow-3xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}

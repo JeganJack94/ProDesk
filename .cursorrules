@@ -1,0 +1,65 @@
+
+ Start all chats with 🤖
+
+ ##Stack
+    - React
+    - TailwindCSS
+    - Shadcn UI
+    - Lucid
+    - Framer Motion
+    - JavaScript
+    - Firebase
+    - Firestore
+    - NodeJS
+    - Express
+    - DaisyUI
+    - Vercel
+
+## Project Structure
+src/
+│
+├── assets/                  # Static assets (images, icons, etc.)
+│   └── logo.png
+│
+├── components/              # Reusable UI components
+│   ├── Navbar.jsx           # Navigation bar
+│   ├── Sidebar.jsx          # Sidebar for dashboard
+│   ├── ProjectCard.jsx      # Card for displaying project details
+│   ├── TaskCard.jsx         # Card for displaying task details
+│   ├── ClientCard.jsx       # Card for displaying client details
+│   └── Timer.jsx            # Timer component for time tracking
+│
+├── context/                 # React Context for global state
+│   └── AuthContext.jsx      # Context for authentication
+│
+├── hooks/                   # Custom hooks
+│   └── useAuth.jsx          # Hook for authentication logic
+│
+├── pages/                   # Page components
+│   ├── Auth/                # Authentication pages
+│   │   ├── Login.jsx        # Login page
+│   │   ├── SignUp.jsx       # Sign-up page
+│   │   └── ForgotPassword.jsx # Forgot password page
+│   ├── Dashboard.jsx        # Dashboard page
+│   ├── Projects/            # Project-related pages
+│   │   ├── ProjectList.jsx  # List of all projects
+│   │   ├── ProjectDetails.jsx # Details of a single project
+│   │   └── CreateProject.jsx # Form to create/edit a project
+│   ├── Tasks/               # Task-related pages
+│   │   ├── TaskList.jsx     # List of all tasks
+│   │   ├── TaskDetails.jsx  # Details of a single task
+│   │   └── CreateTask.jsx   # Form to create/edit a task
+│   ├── Clients/             # Client-related pages
+│   │   ├── ClientList.jsx   # List of all clients
+│   │   ├── ClientDetails.jsx # Details of a single client
+│   │   └── CreateClient.jsx # Form to create/edit a client
+│   ├── TimeTracking.jsx     # Time tracking page
+│   ├── Reports.jsx          # Reporting page
+│   └── Settings.jsx         # Settings page
+│
+├── appwrite/                # appwrite configuration and utilities
+│   ├── firebase.js          # Firebase initialization
+│   └── firestore.js         # Firestore utility functions
+│
+├── App.jsx                  # Main app component
+└── main.jsx                 # Entry point
