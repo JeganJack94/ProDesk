@@ -22,13 +22,13 @@ import ProjectList from './pages/Projects/ProjectList';
 import ProjectDetails from './pages/Projects/ProjectDetails';
 import CreateProject from './pages/Projects/CreateProject';
 import EditProject from './pages/Projects/EditProject';
+import UserManual from './pages/UserManual';
 import { db } from './lib/firebase.js';
 import { useEffect } from 'react';
 import { imageStorage } from './utils/imageStorage';
 
 function App() {
   useEffect(() => {
-    // Clean up old images when app starts
     const cleanupOldImages = () => {
       const lastCleanup = localStorage.getItem('lastImageCleanup');
       const now = Date.now();
@@ -82,6 +82,7 @@ function App() {
                 <Route path="/app/reports" element={<Reports />} />
                 <Route path="/app-store" element={<AppStore />} />
                 <Route path="/app/settings" element={<Settings />} />
+                <Route path="/user-manual" element={<UserManual />} />
                 <Route path="*" element={<Navigate to="/app" replace />} />
               </Route>
             </Route>

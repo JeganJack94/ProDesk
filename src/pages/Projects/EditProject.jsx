@@ -4,12 +4,15 @@ import { ArrowLeft, Loader2, Calendar } from 'lucide-react';
 import { databaseService } from '../../lib/database';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-hot-toast';
+import Loader from '../../components/Loader';
 
 const EditProject = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState([]);
+  const [loadingClients, setLoadingClients] = useState(true);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     title: '',
@@ -17,7 +20,7 @@ const EditProject = () => {
     deadline: '',
     status: 'in-progress',
     priority: 'medium',
-    client: '',
+    clientId: '',
     progress: 0
   });
 
@@ -27,7 +30,25 @@ const EditProject = () => {
       return;
     }
     fetchProject();
+    fetchClients();
   }, [user?.uid, id]);
+
+  const fetchClients = async () => {
+    try {
+      setLoadingClients(true);
+      const result = await databaseService.listClients(user.uid);
+      if (result.success) {
+        setClients(result.clients);
+      } else {
+        toast.error('Failed to load clients');
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      toast.error('Failed to load clients');
+    } finally {
+      setLoadingClients(false);
+    }
+  };
 
   const fetchProject = async () => {
     try {
@@ -39,7 +60,7 @@ const EditProject = () => {
           deadline: result.project.deadline?.split('T')[0] || '',
           status: result.project.status || 'in-progress',
           priority: result.project.priority || 'medium',
-          client: result.project.client || '',
+          clientId: result.project.client?.id || '',
           progress: result.project.progress || 0
         });
       } else {
@@ -60,8 +81,16 @@ const EditProject = () => {
     setLoading(true);
 
     try {
+      const selectedClient = clients.find(client => client.id === formData.clientId);
+      
       const updatedProject = {
         ...formData,
+        client: selectedClient ? {
+          id: selectedClient.id,
+          name: selectedClient.name,
+          company: selectedClient.company,
+          email: selectedClient.email
+        } : null,
         updatedAt: new Date(),
         searchTerms: [
           formData.title.toLowerCase(),
@@ -101,7 +130,7 @@ const EditProject = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 size={24} className="animate-spin text-primary" />
+        <Loader />
       </div>
     );
   }
@@ -177,7 +206,7 @@ const EditProject = () => {
               <div className="relative">
                 <Calendar 
                   size={20} 
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
                 />
                 <input
                   id="deadline"
@@ -228,19 +257,30 @@ const EditProject = () => {
             </div>
 
             {/* Client */}
-            <div>
-              <label htmlFor="client" className="block text-sm font-medium text-foreground mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-foreground">
                 Client
               </label>
-              <input
-                id="client"
-                name="client"
-                type="text"
-                value={formData.client}
+              <select
+                name="clientId"
+                value={formData.clientId}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                placeholder="Enter client name"
-              />
+                className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                disabled={loadingClients}
+              >
+                <option value="">Select a client</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} - {client.company}
+                  </option>
+                ))}
+              </select>
+              {loadingClients && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader small />
+                  <span>Loading clients...</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

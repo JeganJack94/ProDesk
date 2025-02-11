@@ -30,6 +30,11 @@ export const fileStorage = {
 
   // Delete file from localStorage
   deleteFile: (fileName) => {
-    localStorage.removeItem(fileName);
+    try {
+      localStorage.removeItem(fileName);
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 }; 

@@ -2,25 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { databaseService } from '../lib/database';
-import { 
-  Clock, 
-  Calendar,
-  Loader2,
-  FolderKanban,
-  ListTodo,
-  History
-} from 'lucide-react';
+import { Clock, Calendar, FolderKanban, ListTodo, History } from 'lucide-react';
 import Timer from '../components/Timer';
 import { toast } from 'react-hot-toast';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const TimeTracking = () => {
   const navigate = useNavigate();
@@ -29,9 +14,11 @@ const TimeTracking = () => {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
-  const [timeEntries, setTimeEntries] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [timeEntries, setTimeEntries] = useState([]);
+  const [projectAnalysis, setProjectAnalysis] = useState([]);
 
+  // Fetch projects on mount
   useEffect(() => {
     if (!user?.uid) {
       navigate('/login');
@@ -40,13 +27,22 @@ const TimeTracking = () => {
     fetchProjects();
   }, [user?.uid]);
 
+  // Fetch tasks and time entries when a project is selected
   useEffect(() => {
     if (selectedProject) {
       fetchTasks(selectedProject.id);
-      fetchTimeEntries(selectedProject.id);
+      fetchProjectAnalysis();
     }
   }, [selectedProject]);
 
+  // Fetch time entries for the selected project and task
+  useEffect(() => {
+    if (selectedProject && selectedTask) {
+      fetchTimeEntries();
+    }
+  }, [selectedTask]);
+
+  // Fetch all projects
   const fetchProjects = async () => {
     try {
       const result = await databaseService.listProjects(user.uid);
@@ -54,78 +50,88 @@ const TimeTracking = () => {
         setProjects(result.projects);
       }
     } catch (error) {
-      console.error('Error fetching projects:', error);
       toast.error('Failed to load projects');
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch tasks for the selected project
   const fetchTasks = async (projectId) => {
     try {
-      const result = await databaseService.listProjectTasks(user.uid, projectId);
+      if (!projectId) return;
+      
+      const result = await databaseService.listTasks(user.uid, projectId);
       if (result.success) {
         setTasks(result.tasks);
+        // Clear selected task when loading new tasks
+        setSelectedTask(null);
       }
     } catch (error) {
-      console.error('Error fetching tasks:', error);
       toast.error('Failed to load tasks');
     }
   };
 
-  const fetchTimeEntries = async (projectId) => {
+  // Fetch time entries for the selected project and task
+  const fetchTimeEntries = async () => {
+    if (!selectedProject?.id || !selectedTask?.id) return;
+    
     try {
-      const result = await databaseService.listTimeEntries(user.uid, projectId);
+      const result = await databaseService.listTimeEntries(
+        user.uid,
+        selectedProject.id,
+        selectedTask.id
+      );
       if (result.success) {
         setTimeEntries(result.timeEntries);
       }
     } catch (error) {
-      console.error('Error fetching time entries:', error);
       toast.error('Failed to load time entries');
     }
   };
 
-  const handleTimeUpdate = async (duration) => {
-    if (!selectedProject || !selectedTask) return;
-
+  // Fetch project time analysis for the chart
+  const fetchProjectAnalysis = async () => {
+    if (!selectedProject?.id) return;
+    
     try {
-      const timeData = {
-        projectId: selectedProject.id,
-        projectTitle: selectedProject.title,
-        taskId: selectedTask.id,
-        taskTitle: selectedTask.title,
-        duration,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-
-      const result = await databaseService.createTimeEntry(
+      const result = await databaseService.getProjectTimeAnalysis(
         user.uid,
-        selectedProject.id,
-        timeData
+        selectedProject.id
       );
-
       if (result.success) {
-        fetchTimeEntries(selectedProject.id);
-        toast.success('Time entry saved');
+        setProjectAnalysis(result.timeAnalysis);
       }
     } catch (error) {
-      console.error('Error saving time entry:', error);
-      toast.error('Failed to save time entry');
+      toast.error('Failed to load time analysis');
     }
   };
 
-  const getChartData = () => {
-    const dailyTotals = timeEntries.reduce((acc, entry) => {
-      const date = new Date(entry.date).toLocaleDateString();
-      acc[date] = (acc[date] || 0) + entry.duration;
-      return acc;
-    }, {});
+  // Format time for display (converts seconds to hours)
+  const formatTime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
 
-    return Object.entries(dailyTotals).map(([date, total]) => ({
-      date,
-      hours: Math.round(total / 3600 * 100) / 100
+  // Prepare data for the chart
+  const getChartData = () => {
+    return projectAnalysis.map(item => ({
+      task: item.taskTitle,
+      hours: Math.round((item.totalTime / 3600) * 100) / 100
     }));
+  };
+
+  // Project selection handler
+  const handleProjectChange = (e) => {
+    const project = projects.find(p => p.id === e.target.value);
+    setSelectedProject(project);
+  };
+
+  // Task selection handler
+  const handleTaskChange = (e) => {
+    const task = tasks.find(t => t.id === e.target.value);
+    setSelectedTask(task);
   };
 
   return (
@@ -145,12 +151,8 @@ const TimeTracking = () => {
               <label className="block text-sm font-medium">Select Project</label>
               <select
                 value={selectedProject?.id || ''}
-                onChange={(e) => {
-                  const project = projects.find(p => p.id === e.target.value);
-                  setSelectedProject(project);
-                  setSelectedTask(null);
-                }}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                onChange={handleProjectChange}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background"
               >
                 <option value="">Choose a project</option>
                 {projects.map(project => (
@@ -161,46 +163,50 @@ const TimeTracking = () => {
               </select>
             </div>
 
-            {selectedProject && (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Select Task</label>
-                <select
-                  value={selectedTask?.id || ''}
-                  onChange={(e) => {
-                    const task = tasks.find(t => t.id === e.target.value);
-                    setSelectedTask(task);
-                  }}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">Choose a task</option>
-                  {tasks.map(task => (
-                    <option key={task.id} value={task.id}>
-                      {task.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium">Select Task</label>
+              <select
+                value={selectedTask?.id || ''}
+                onChange={handleTaskChange}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background"
+                disabled={!selectedProject}
+              >
+                <option value="">Choose a task</option>
+                {tasks.map(task => (
+                  <option key={task.id} value={task.id}>
+                    {task.title}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Timer */}
-          <Timer 
-            onTimeUpdate={handleTimeUpdate}
-            task={selectedTask}
-          />
+          {selectedProject && selectedTask && (
+            <Timer
+              projectId={selectedProject.id}
+              taskId={selectedTask.id}
+              projectTitle={selectedProject.title}
+              taskTitle={selectedTask.title}
+              onTimeEntryCreated={() => {
+                fetchTimeEntries();
+                fetchProjectAnalysis();
+              }}
+            />
+          )}
         </div>
 
         {/* Time Entries & Chart */}
         <div className="space-y-6">
           {/* Chart */}
           <div className="bg-card rounded-lg border border-border p-4">
-            <h2 className="text-lg font-semibold mb-4">Time Distribution</h2>
+            <h2 className="text-lg font-semibold mb-4">Project Time Analysis</h2>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={getChartData()}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                  <XAxis dataKey="task" />
+                  <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
                   <Tooltip />
                   <Bar dataKey="hours" fill="#3b82f6" />
                 </BarChart>
@@ -231,10 +237,7 @@ const TimeTracking = () => {
                     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                     .slice(0, 7)
                     .map(entry => (
-                      <tr 
-                        key={entry.id}
-                        className="hover:bg-muted/50 transition-colors"
-                      >
+                      <tr key={entry.id} className="hover:bg-muted/50 transition-colors">
                         <td className="py-3 px-3">
                           <div className="font-medium text-sm">{entry.projectTitle}</div>
                         </td>
@@ -243,7 +246,7 @@ const TimeTracking = () => {
                         </td>
                         <td className="py-3 px-3">
                           <div className="font-mono text-sm bg-primary/10 text-primary rounded-full px-2 py-1 inline-block">
-                            {Math.round(entry.duration / 3600 * 100) / 100}h
+                            {formatTime(entry.duration)}
                           </div>
                         </td>
                         <td className="py-3 px-3">
@@ -273,4 +276,4 @@ const TimeTracking = () => {
   );
 };
 
-export default TimeTracking; 
+export default TimeTracking;

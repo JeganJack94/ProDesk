@@ -196,7 +196,7 @@ const CreateProject = () => {
               <div className="relative">
                 <Calendar 
                   size={20} 
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
                 />
                 <input
                   id="deadline"

@@ -11,7 +11,8 @@ import {
     orderBy,
     setDoc,
     serverTimestamp,
-    increment
+    increment,
+    limit
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { auth } from '../firebase/config';
@@ -64,7 +65,6 @@ export const databaseService = {
             await setDoc(projectRef, newProject);
             return { success: true, project: newProject };
         } catch (error) {
-            console.error('Error creating project:', error);
             return { success: false, error: error.message };
         }
     },
@@ -79,7 +79,6 @@ export const databaseService = {
             }
             return { success: false, error: 'Project not found' };
         } catch (error) {
-            console.error('Error fetching project:', error);
             return { success: false, error: error.message };
         }
     },
@@ -89,34 +88,18 @@ export const databaseService = {
             if (!userId) {
                 throw new Error('User ID is required');
             }
-
-            console.log('Listing projects for user:', userId); // Debug log
-
             const projectsRef = collection(db, `users/${userId}/projects`);
-            
-            let conditions = [
-                orderBy('createdAt', 'desc')
-            ];
-
+            let conditions = [orderBy('createdAt', 'desc')];
             const q = query(projectsRef, ...conditions);
             const snapshot = await getDocs(q);
-            
-            console.log('Found documents:', snapshot.size); // Debug log
-
-            const projects = snapshot.docs.map(doc => {
-                const data = doc.data();
-                console.log('Document data:', data); // Debug log
-                return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: data.createdAt?.toDate() || new Date(),
-                    updatedAt: data.updatedAt?.toDate() || new Date()
-                };
-            });
-
+            const projects = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || new Date(),
+                updatedAt: doc.data().updatedAt?.toDate() || new Date()
+            }));
             return { success: true, projects };
         } catch (error) {
-            console.error('Error listing projects:', error);
             return { success: false, error: error.message };
         }
     },
@@ -144,7 +127,6 @@ export const databaseService = {
                 }
             };
         } catch (error) {
-            console.error('Error updating project:', error);
             return { success: false, error: error.message };
         }
     },
@@ -155,25 +137,51 @@ export const databaseService = {
             await deleteDoc(projectRef);
             return { success: true };
         } catch (error) {
-            console.error('Error deleting project:', error);
             return { success: false, error: error.message };
         }
     },
 
     // Tasks
+    async listProjectTasks(userId, projectId) {
+        try {
+            if (!userId || !projectId) {
+                throw new Error('User ID and Project ID are required');
+            }
+            
+            const tasksRef = collection(db, `users/${userId}/projects/${projectId}/tasks`);
+            const q = query(tasksRef, orderBy('createdAt', 'desc'));
+            const snapshot = await getDocs(q);
+            
+            const tasks = snapshot.docs.map(doc => ({
+                id: doc.id,
+                projectId,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || new Date(),
+                updatedAt: doc.data().updatedAt?.toDate() || new Date()
+            }));
+            
+            return { success: true, tasks };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
     async createTask(userId, projectId, taskData) {
         try {
             const taskRef = doc(collection(db, `users/${userId}/projects/${projectId}/tasks`));
             const newTask = {
                 ...taskData,
                 id: taskRef.id,
+                projectId,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 status: taskData.status || 'todo',
                 priority: taskData.priority || 'medium',
                 reminderTime: taskData.reminderTime || null,
-                timeSpent: '0h'
+                timeSpent: 0
             };
+
+            await setDoc(taskRef, newTask);
 
             // Update project task count
             const projectRef = doc(db, `users/${userId}/projects/${projectId}`);
@@ -181,16 +189,25 @@ export const databaseService = {
                 'tasks.total': increment(1)
             });
 
-            await setDoc(taskRef, newTask);
-            return { success: true, task: newTask };
+            return { 
+                success: true, 
+                task: {
+                    ...newTask,
+                    createdAt: new Date(),
+                    updatedAt: new Date()
+                }
+            };
         } catch (error) {
-            console.error('Create task error:', error);
             return { success: false, error: error.message };
         }
     },
 
-    async listProjectTasks(userId, projectId) {
+    async listTasks(userId, projectId) {
         try {
+            if (!userId || !projectId) {
+                throw new Error('User ID and Project ID are required');
+            }
+
             const tasksRef = collection(db, `users/${userId}/projects/${projectId}/tasks`);
             const q = query(tasksRef, orderBy('createdAt', 'desc'));
             const snapshot = await getDocs(q);
@@ -204,7 +221,6 @@ export const databaseService = {
 
             return { success: true, tasks };
         } catch (error) {
-            console.error('Error listing tasks:', error);
             return { success: false, error: error.message };
         }
     },
@@ -228,7 +244,6 @@ export const databaseService = {
 
             return { success: true };
         } catch (error) {
-            console.error('Error updating task:', error);
             return { success: false, error: error.message };
         }
     },
@@ -251,7 +266,6 @@ export const databaseService = {
             await deleteDoc(taskRef);
             return { success: true };
         } catch (error) {
-            console.error('Error deleting task:', error);
             return { success: false, error: error.message };
         }
     },
@@ -284,7 +298,6 @@ export const databaseService = {
                 }
             };
         } catch (error) {
-            console.error('Error creating client:', error);
             return { success: false, error: error.message };
         }
     },
@@ -308,7 +321,6 @@ export const databaseService = {
 
             return { success: true, clients };
         } catch (error) {
-            console.error('Error listing clients:', error);
             return { success: false, error: error.message };
         }
     },
@@ -330,7 +342,6 @@ export const databaseService = {
             
             return { success: true };
         } catch (error) {
-            console.error('Error updating client:', error);
             return { success: false, error: error.message };
         }
     },
@@ -346,78 +357,110 @@ export const databaseService = {
             
             return { success: true };
         } catch (error) {
-            console.error('Error deleting client:', error);
             return { success: false, error: error.message };
         }
     },
 
     // Time Tracking
-    async createTimeEntry(userId, projectId, timeData) {
+    async createTimeEntry(userId, timeEntry) {
         try {
-            const timeEntryRef = doc(collection(db, `users/${userId}/projects/${projectId}/tasks/${timeData.taskId}/timeEntries`));
-            const newTimeEntry = {
-                ...timeData,
-                id: timeEntryRef.id,
-                startTime: timeData.startTime,
-                endTime: null,
-                duration: 0,
-                status: 'running',
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp()
-            };
-            
-            await setDoc(timeEntryRef, newTimeEntry);
-            
+            const timeEntriesRef = collection(
+                db, 
+                `users/${userId}/projects/${timeEntry.projectId}/tasks/${timeEntry.taskId}/timeEntries`
+            );
+            const docRef = await addDoc(timeEntriesRef, {
+                ...timeEntry,
+                createdAt: serverTimestamp()
+            });
+
+            // Update task with time spent
+            const taskRef = doc(db, `users/${userId}/projects/${timeEntry.projectId}/tasks/${timeEntry.taskId}`);
+            await updateDoc(taskRef, {
+                timeSpent: increment(timeEntry.duration)
+            });
+
             return { 
                 success: true, 
-                timeEntry: {
-                    ...newTimeEntry,
-                    createdAt: new Date(),
-                    updatedAt: new Date()
-                }
+                timeEntry: { 
+                    id: docRef.id, 
+                    ...timeEntry 
+                } 
             };
         } catch (error) {
-            console.error('Error creating time entry:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    async updateTimeEntry(userId, projectId, timeEntryId, timeData) {
-        try {
-            const timeEntryRef = doc(db, `users/${userId}/projects/${projectId}/tasks/${timeData.taskId}/timeEntries/${timeEntryId}`);
-            
-            await updateDoc(timeEntryRef, {
-                ...timeData,
-                updatedAt: serverTimestamp()
-            });
-
-            // Update task total time
-            const taskRef = doc(db, `users/${userId}/projects/${projectId}/tasks/${timeData.taskId}`);
-            await updateDoc(taskRef, {
-                totalTime: increment(timeData.duration)
-            });
-
-            return { success: true };
-        } catch (error) {
-            console.error('Error updating time entry:', error);
             return { success: false, error: error.message };
         }
     },
 
     async listTimeEntries(userId, projectId, taskId) {
         try {
-            const timeEntriesRef = collection(db, `users/${userId}/projects/${projectId}/tasks/${taskId}/timeEntries`);
-            const q = query(timeEntriesRef, orderBy('startTime', 'desc'));
+            const timeEntriesRef = collection(
+                db, 
+                `users/${userId}/projects/${projectId}/tasks/${taskId}/timeEntries`
+            );
+            const q = query(
+                timeEntriesRef,
+                orderBy('createdAt', 'desc'),
+                limit(50)
+            );
             const snapshot = await getDocs(q);
-
+            
             const timeEntries = snapshot.docs.map(doc => ({
                 id: doc.id,
-                ...doc.data()
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || new Date(),
+                startTime: doc.data().startTime?.toDate() || new Date(),
+                endTime: doc.data().endTime?.toDate() || new Date()
             }));
-
+            
             return { success: true, timeEntries };
         } catch (error) {
-            console.error('Error listing time entries:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Get total time spent on a task
+    async getTaskTimeSpent(userId, projectId, taskId) {
+        try {
+            const timeEntriesRef = collection(
+                db, 
+                `users/${userId}/projects/${projectId}/tasks/${taskId}/timeEntries`
+            );
+            const snapshot = await getDocs(timeEntriesRef);
+            
+            const totalTime = snapshot.docs.reduce((total, doc) => {
+                const entry = doc.data();
+                return total + (entry.duration || 0);
+            }, 0);
+            
+            return { success: true, totalTime };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Get project time analysis
+    async getProjectTimeAnalysis(userId, projectId) {
+        try {
+            const tasksRef = collection(db, `users/${userId}/projects/${projectId}/tasks`);
+            const taskSnapshot = await getDocs(tasksRef);
+            
+            const timeAnalysis = await Promise.all(
+                taskSnapshot.docs.map(async (taskDoc) => {
+                    const taskId = taskDoc.id;
+                    const taskData = taskDoc.data();
+                    
+                    const timeResult = await this.getTaskTimeSpent(userId, projectId, taskId);
+                    
+                    return {
+                        taskId,
+                        taskTitle: taskData.title,
+                        totalTime: timeResult.success ? timeResult.totalTime : 0
+                    };
+                })
+            );
+            
+            return { success: true, timeAnalysis };
+        } catch (error) {
             return { success: false, error: error.message };
         }
     },
@@ -467,7 +510,6 @@ export const databaseService = {
                 }
             };
         } catch (error) {
-            console.error('Error getting settings:', error);
             return { success: false, error: error.message };
         }
     },
@@ -481,7 +523,6 @@ export const databaseService = {
             });
             return { success: true };
         } catch (error) {
-            console.error('Error updating settings:', error);
             return { success: false, error: error.message };
         }
     },
@@ -502,7 +543,6 @@ export const databaseService = {
             
             return { success: true };
         } catch (error) {
-            console.error('Error updating password:', error);
             return { 
                 success: false, 
                 error: error.code === 'auth/wrong-password' 
@@ -527,7 +567,6 @@ export const databaseService = {
             
             return { success: true, apps };
         } catch (error) {
-            console.error('Error listing apps:', error);
             return { success: false, error: error.message };
         }
     },
@@ -543,7 +582,6 @@ export const databaseService = {
             });
             return { success: true };
         } catch (error) {
-            console.error('Error creating app:', error);
             return { success: false, error: error.message };
         }
     },
@@ -571,7 +609,6 @@ export const databaseService = {
                 reader.readAsDataURL(file);
             });
         } catch (error) {
-            console.error('Error uploading image:', error);
             return null;
         }
     },
@@ -585,7 +622,6 @@ export const databaseService = {
             });
             return { success: true };
         } catch (error) {
-            console.error('Error updating app:', error);
             return { success: false, error: error.message };
         }
     },
@@ -596,7 +632,6 @@ export const databaseService = {
             await deleteDoc(appRef);
             return { success: true };
         } catch (error) {
-            console.error('Error deleting app:', error);
             return { success: false, error: error.message };
         }
     },
@@ -624,7 +659,6 @@ export const databaseService = {
                 }
             };
         } catch (error) {
-            console.error('Error adding note:', error);
             return { success: false, error: error.message };
         }
     },
@@ -644,7 +678,6 @@ export const databaseService = {
             
             return { success: true, notes };
         } catch (error) {
-            console.error('Error listing notes:', error);
             return { success: false, error: error.message };
         }
     },
@@ -655,7 +688,6 @@ export const databaseService = {
             await deleteDoc(noteRef);
             return { success: true };
         } catch (error) {
-            console.error('Error deleting note:', error);
             return { success: false, error: error.message };
         }
     }

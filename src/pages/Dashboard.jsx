@@ -26,7 +26,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Legend
 } from 'recharts';
 import ProjectCard from '../components/ProjectCard';
 import TaskCard from '../components/TaskCard';
@@ -43,6 +44,17 @@ const themeColors = {
   warning: '#fbbf24',
   text: '#ffffff'
 };
+
+// Chart Colors
+const COLORS = [
+  '#f87171', // red
+  '#fbbf24', // yellow
+  '#34d399', // green
+  '#ef4444', // darker red
+  '#60a5fa', // blue
+  '#a78bfa', // purple
+  '#f472b6'  // pink
+];
 
 const DashboardCard = ({ title, value, icon: Icon, trend, color }) => (
   <div className="relative overflow-hidden bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl border border-red-500/20 p-6 transition-all duration-300 hover:scale-102 hover:shadow-xl hover:shadow-red-500/10 hover:border-red-500/40 animate-fade-in group">
@@ -80,10 +92,14 @@ const Dashboard = () => {
     totalClients: 0,
     totalTasks: 0,
     completedTasks: 0,
-    totalTimeTracked: 0,
-    recentProjects: [],
-    upcomingDeadlines: [],
-    recentActivities: []
+    totalTimeSpent: 0,
+    projectTimeData: [],
+    tasksByStatus: {
+      todo: 0,
+      inProgress: 0,
+      completed: 0,
+      blocked: 0
+    }
   });
 
   useEffect(() => {
@@ -107,99 +123,80 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('Fetching data for user:', user.uid);
       
       // Fetch projects
       const projectsResult = await databaseService.listProjects(user.uid);
-      console.log('Projects result:', projectsResult);
       const projects = projectsResult.success ? projectsResult.projects : [];
       setProjects(projects);
       
       // Fetch clients
       const clientsResult = await databaseService.listClients(user.uid);
-      console.log('Clients result:', clientsResult);
       const clients = clientsResult.success ? clientsResult.clients : [];
       
-      // Fetch all tasks for all projects
-      let tasks = [];
+      // Fetch all tasks and time entries for each project
+      let allTasks = [];
+      let totalTimeSpent = 0;
+      let projectTimeData = [];
+
       for (const project of projects) {
-        const projectTasks = await fetchProjectTasks(user.uid, project.id);
-        tasks = [...tasks, ...projectTasks.map(task => ({
-          ...task,
-          projectId: project.id,
-          projectTitle: project.title
-        }))];
-      }
-      setAllTasks(tasks);
-      
-      // Calculate metrics
-      const activeProjects = projects.filter(p => p.status === 'in-progress');
-      const completedProjects = projects.filter(p => p.status === 'completed');
-      
-      // Calculate tasks with null checks
-      const totalTasks = projects.reduce((acc, p) => {
-        return acc + (p.tasks?.list?.length || 0);
-      }, 0);
-      
-      const completedTasks = projects.reduce((acc, p) => {
-        return acc + (p.tasks?.list?.filter(t => t.status === 'completed').length || 0);
-      }, 0);
-      
-      // Get recent projects with proper date handling
-      const recentProjects = projects
-        .sort((a, b) => {
-          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt);
-          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt);
-          return dateB - dateA;
-        })
-        .slice(0, 5);
-      
-      // Get upcoming deadlines with proper date handling
-      const upcomingDeadlines = projects
-        .filter(p => p.status !== 'completed' && p.deadline)
-        .sort((a, b) => {
-          const dateA = new Date(a.deadline);
-          const dateB = new Date(b.deadline);
-          return dateA - dateB;
-        })
-        .slice(0, 5);
-      
-      // Calculate total time tracked
-      let totalTimeTracked = 0;
-      for (const project of projects) {
-        const timeResult = await databaseService.listTimeEntries(user.uid, project.id);
-        console.log('Time entries for project:', project.id, timeResult);
-        if (timeResult.success) {
-          totalTimeTracked += timeResult.timeEntries.reduce((acc, entry) => acc + (entry.duration || 0), 0);
+        // Fetch tasks for this project
+        const tasksResult = await databaseService.listProjectTasks(user.uid, project.id);
+        if (tasksResult.success) {
+          // Add project title to each task
+          const tasksWithProject = tasksResult.tasks.map(task => ({
+            ...task,
+            projectTitle: project.title
+          }));
+          allTasks.push(...tasksWithProject);
         }
+
+        // Fetch time entries for all tasks in this project
+        let projectTotalTime = 0;
+        const tasks = tasksResult.success ? tasksResult.tasks : [];
+        
+        for (const task of tasks) {
+          const timeEntriesResult = await databaseService.listTimeEntries(
+            user.uid,
+            project.id,
+            task.id
+          );
+          
+          if (timeEntriesResult.success) {
+            const taskTotalTime = timeEntriesResult.timeEntries.reduce(
+              (sum, entry) => sum + entry.duration,
+              0
+            );
+            projectTotalTime += taskTotalTime;
+            totalTimeSpent += taskTotalTime;
+          }
+        }
+
+        // Add project time data for chart
+        projectTimeData.push({
+          name: project.title,
+          hours: Math.round((projectTotalTime / 3600) * 10) / 10
+        });
       }
 
-      // Get recent activities with proper date handling
-      const recentActivities = projects
-        .map(project => ({
-          type: 'project',
-          title: project.title,
-          date: project.createdAt?.toDate?.() || new Date(project.createdAt),
-          status: project.status
-        }))
-        .sort((a, b) => b.date - a.date)
-        .slice(0, 5);
-
+      setAllTasks(allTasks); // Store all tasks in state
       setMetrics({
         totalProjects: projects.length,
-        activeProjects: activeProjects.length,
-        completedProjects: completedProjects.length,
+        activeProjects: projects.filter(p => p.status === 'in-progress').length,
+        completedProjects: projects.filter(p => p.status === 'completed').length,
         totalClients: clients.length,
-        totalTasks,
-        completedTasks,
-        totalTimeTracked,
-        recentProjects,
-        upcomingDeadlines,
-        recentActivities
+        totalTasks: allTasks.length,
+        completedTasks: allTasks.filter(t => t.status === 'completed').length,
+        totalTimeSpent,
+        projectTimeData,
+        tasksByStatus: {
+          todo: allTasks.filter(t => t.status === 'todo').length,
+          inProgress: allTasks.filter(t => t.status === 'in-progress').length,
+          completed: allTasks.filter(t => t.status === 'completed').length,
+          blocked: allTasks.filter(t => t.status === 'blocked').length
+        }
       });
+
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      console.error('Error details:', error.message);
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -278,7 +275,9 @@ const Dashboard = () => {
     
     return allTasks
       .filter(task => {
-        const taskDate = task.createdAt?.toDate?.() || new Date(task.createdAt);
+        const taskDate = task.createdAt instanceof Date 
+          ? task.createdAt 
+          : new Date(task.createdAt);
         return (now - taskDate) <= oneWeek;
       })
       .sort((a, b) => {
@@ -290,7 +289,7 @@ const Dashboard = () => {
         task: task.title,
         status: task.status,
         priority: task.priority,
-        projectTitle: task.projectTitle
+        projectTitle: task.projectTitle || 'No Project'
       }));
   };
 
@@ -326,7 +325,7 @@ const Dashboard = () => {
           />
           <DashboardCard
             title="Time Tracked"
-            value={`${Math.round(metrics.totalTimeTracked / 3600)}h`}
+            value={`${Math.round(metrics.totalTimeSpent / 3600)}h`}
             icon={Clock}
           />
         </div>
@@ -420,38 +419,110 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* This Week's Priorities */}
-          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl border border-red-500/20 p-6 hover:shadow-xl hover:shadow-red-500/10 transition-all duration-300 hover:border-red-500/40">
+          {/* Weekly Priority Tasks */}
+          <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-xl border border-red-500/20 p-6">
             <h2 className="text-xl font-bold text-white mb-6">Weekly Priority Tasks</h2>
             <div className="space-y-4">
-              {getWeeklyPriorityTasks().map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg border border-red-500/10"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-lg ${
-                      item.priority === 'high' ? 'bg-red-500/20 text-red-500' :
-                      item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
-                      'bg-blue-500/20 text-blue-500'
+              {loading ? (
+                <div className="text-center py-4 text-gray-400">Loading tasks...</div>
+              ) : getWeeklyPriorityTasks().length > 0 ? (
+                getWeeklyPriorityTasks().map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-lg border border-red-500/10"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`p-2 rounded-lg ${
+                        item.priority === 'high' ? 'bg-red-500/20 text-red-500' :
+                        item.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
+                        'bg-blue-500/20 text-blue-500'
+                      }`}>
+                        <AlertCircle size={20} />
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{item.task}</p>
+                        <p className="text-sm text-gray-400">{item.projectTitle}</p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm ${
+                      item.status === 'completed' ? 'bg-green-500/20 text-green-500' :
+                      'bg-yellow-500/20 text-yellow-500'
                     }`}>
-                      <AlertCircle size={20} />
-                    </div>
-                    <div>
-                      <p className="text-white font-medium">{item.task}</p>
-                      <p className="text-sm text-gray-400">{item.projectTitle}</p>
-                    </div>
+                      {item.status}
+                    </span>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    item.status === 'completed' ? 'bg-green-500/20 text-green-500' :
-                    'bg-yellow-500/20 text-yellow-500'
-                  }`}>
-                    {item.status}
-                  </span>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-400">
+                  No priority tasks for this week
                 </div>
-              ))}
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Project Time Distribution Chart */}
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h2 className="text-lg font-semibold mb-4">Time Spent by Project</h2>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.projectTimeData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: 'Hours', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Bar dataKey="hours" fill="#3b82f6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Task Status Distribution */}
+        <div className="bg-card rounded-lg border border-border p-4">
+          <h2 className="text-lg font-semibold mb-4">Task Status Distribution</h2>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'To Do', value: metrics.tasksByStatus.todo, color: '#f87171' },
+                    { name: 'In Progress', value: metrics.tasksByStatus.inProgress, color: '#fbbf24' },
+                    { name: 'Completed', value: metrics.tasksByStatus.completed, color: '#34d399' },
+                    { name: 'Blocked', value: metrics.tasksByStatus.blocked, color: '#ef4444' }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {metrics.tasksByStatus && Object.values(metrics.tasksByStatus).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <DashboardCard
+            title="Total Time Tracked"
+            value={`${Math.round(metrics.totalTimeSpent / 3600)}h`}
+            icon={Clock}
+            trend={`${metrics.activeProjects} active projects`}
+          />
+          <DashboardCard
+            title="Task Completion"
+            value={`${Math.round((metrics.completedTasks / metrics.totalTasks) * 100)}%`}
+            icon={CheckCircle2}
+            trend={`${metrics.completedTasks}/${metrics.totalTasks} tasks`}
+          />
+          {/* ... other cards ... */}
         </div>
       </div>
     </div>

@@ -51,6 +51,7 @@ const TaskList = () => {
           if (tasksResult.success) {
             allTasks.push(...tasksResult.tasks.map(task => ({
               ...task,
+              projectId: project.id,
               projectTitle: project.title
             })));
           }

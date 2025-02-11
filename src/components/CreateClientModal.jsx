@@ -77,7 +77,7 @@ const CreateClientModal = ({ isOpen, onClose, userId, onClientCreated }) => {
                 Full Name <span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <User className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <input
                   type="text"
                   name="name"
@@ -96,7 +96,7 @@ const CreateClientModal = ({ isOpen, onClose, userId, onClientCreated }) => {
                 Company Name <span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <input
                   type="text"
                   name="company"
@@ -118,7 +118,7 @@ const CreateClientModal = ({ isOpen, onClose, userId, onClientCreated }) => {
                 Email <span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <input
                   type="email"
                   name="email"
@@ -137,7 +137,7 @@ const CreateClientModal = ({ isOpen, onClose, userId, onClientCreated }) => {
                 Phone Number
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Phone className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <input
                   type="tel"
                   name="phone"

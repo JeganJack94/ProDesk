@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 
 const features = [
@@ -31,12 +31,20 @@ const LandingPage = () => {
               <Sparkles className="text-red-500" size={24} />
               <h1 className="text-2xl font-bold text-white">ProDesk</h1>
             </div>
-            <button
-              onClick={() => navigate('/login')}
-              className="px-4 py-2 rounded-full bg-red-500/10 text-white border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-300 hover:scale-105"
-            >
-              Login
-            </button>
+            <div className="flex items-center gap-4">
+              <Link
+                to="/user-manual"
+                className="px-4 py-2 rounded-full bg-red-500/10 text-white border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-300 hover:scale-105"
+              >
+                User Guide
+              </Link>
+              <button
+                onClick={() => navigate('/login')}
+                className="px-4 py-2 rounded-full bg-red-500/10 text-white border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-300 hover:scale-105"
+              >
+                Login
+              </button>
+            </div>
           </nav>
 
           {/* Hero Section */}
@@ -56,12 +64,12 @@ const LandingPage = () => {
                 Get Started Free
                 <ArrowRight size={20} />
               </button>
-              <button
-                onClick={() => navigate('/login')}
+              <Link
+                to="/user-manual"
                 className="px-8 py-3 rounded-full bg-red-500/10 text-white border border-red-500/20 hover:bg-red-500/20 hover:border-red-500/30 transition-all duration-300 hover:scale-105"
               >
                 Learn More
-              </button>
+              </Link>
             </div>
           </div>
 

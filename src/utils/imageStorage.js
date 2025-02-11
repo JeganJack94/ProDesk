@@ -4,7 +4,6 @@ export const imageStorage = {
     try {
       return localStorage.getItem(key);
     } catch (error) {
-      console.error('Error getting image:', error);
       return null;
     }
   },

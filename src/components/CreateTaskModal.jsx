@@ -14,7 +14,7 @@ const CreateTaskModal = ({ isOpen, onClose, projectId, projectTitle, userId, onT
     status: 'todo',
     projectId: projectId || '',
     projectTitle: projectTitle || '',
-    estimatedTime: '1h',
+    estimatedTime: '',
   });
 
   useEffect(() => {
@@ -52,6 +52,7 @@ const CreateTaskModal = ({ isOpen, onClose, projectId, projectTitle, userId, onT
     try {
       const taskData = {
         ...formData,
+        estimatedTime: formData.estimatedTime || '1h',
         createdAt: new Date(),
         timeSpent: '0h',
       };
@@ -70,7 +71,7 @@ const CreateTaskModal = ({ isOpen, onClose, projectId, projectTitle, userId, onT
           status: 'todo',
           projectId: projectId || '',
           projectTitle: projectTitle || '',
-          estimatedTime: '1h',
+          estimatedTime: '',
         });
       } else {
         toast.error(result.error || 'Failed to create task');
@@ -184,14 +185,14 @@ const CreateTaskModal = ({ isOpen, onClose, projectId, projectTitle, userId, onT
                   Due Date <span className="text-destructive">*</span>
                 </label>
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <input
                     type="date"
                     name="dueDate"
                     required
                     value={formData.dueDate}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full pl-3 pr-10 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
@@ -202,13 +203,13 @@ const CreateTaskModal = ({ isOpen, onClose, projectId, projectTitle, userId, onT
                   Estimated Time
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Clock className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <input
                     type="text"
                     name="estimatedTime"
                     value={formData.estimatedTime}
                     onChange={handleChange}
-                    className="w-full pl-10 pr-3 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className="w-full pl-3 pr-10 py-2 rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                     placeholder="e.g., 2h 30m"
                   />
                 </div>
